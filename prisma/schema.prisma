@@ -92,6 +92,20 @@ model Player {
   isManagedByAgent Boolean  @default(false)
 }
 
+model YouthProspect {
+  id          Int     @id @default(autoincrement())
+  name        String
+  nationality String
+  age         Int
+  position    String
+  overall     Float
+  potential   Float
+  morale      Float
+  season      Int
+  windowWeek  Int
+  isClaimed   Boolean @default(false)
+}
+
 model Company {
   id              Int                   @id @default(1)
   agencyId        Int                   @unique
@@ -144,14 +158,14 @@ model StockPricePoint {
 
 model PortfolioHolding {
   id          Int   @id @default(autoincrement())
-  clubId       Int  @unique
-  shares       Float
-  averageCost  Float
+  clubId      Int   @unique
+  shares      Float
+  averageCost Float
 }
 
 model StockTransaction {
   id        Int      @id @default(autoincrement())
-  clubId     Int
+  clubId    Int
   action    String
   shares    Float
   price     Float

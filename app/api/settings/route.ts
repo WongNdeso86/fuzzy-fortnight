@@ -24,6 +24,10 @@ export async function POST(req: Request) {
       await prisma.portfolioHolding.deleteMany();
       await prisma.portfolioHolding.createMany({ data: body.data.holdings.map((h: {clubId:number;shares:number;averageCost:number})=>({ clubId:h.clubId, shares:h.shares, averageCost:h.averageCost })) });
     }
+    if (Array.isArray(body.data?.youthProspects)) {
+      await prisma.youthProspect.deleteMany();
+      await prisma.youthProspect.createMany({ data: body.data.youthProspects.map((y: any) => ({ name: y.name, nationality: y.nationality, age: y.age, position: y.position, overall: y.overall, potential: y.potential, morale: y.morale, season: y.season, windowWeek: y.windowWeek, isClaimed: y.isClaimed })) });
+    }
   }
 
   if (body.kind === "export") {
@@ -31,7 +35,8 @@ export async function POST(req: Request) {
       agency: await prisma.agency.findUnique({ where: { id: 1 } }),
       company: await prisma.company.findUnique({ where: { id: 1 } }),
       gameState: await prisma.gameState.findUnique({ where: { id: 1 } }),
-      holdings: await prisma.portfolioHolding.findMany()
+      holdings: await prisma.portfolioHolding.findMany(),
+      youthProspects: await prisma.youthProspect.findMany()
     };
     return Response.json(data);
   }

@@ -15,6 +15,7 @@ async function main() {
   await prisma.clubStock.deleteMany();
   await prisma.supportProgram.deleteMany();
   await prisma.player.deleteMany();
+  await prisma.youthProspect.deleteMany();
   await prisma.sponsorshipContract.deleteMany();
   await prisma.company.deleteMany();
   await prisma.staff.deleteMany();
@@ -69,24 +70,22 @@ async function main() {
       professionalism: 40 + Math.random() * 55,
       marketValue: ov * 12000 + Math.random() * 400000,
       clubId: club.id,
-      isManagedByAgent: i < 25
+      isManagedByAgent: i < 12
     });
   }
   for (let i = 0; i < players.length; i += 1000) {
     await prisma.player.createMany({ data: players.slice(i, i + 1000) });
   }
 
-  await prisma.agency.create({ data: { id: 1, name: "Aurora Agency", cash: 5_000_000, reputation: 35, weeklyCosts: 120000, scoutingNetwork: 3 } });
-  await prisma.company.create({ data: { id: 1, agencyId: 1, name: "Nova Holdings", cash: 8_000_000, revenueBase: 500000, brandReputation: 25, industryType: "Tech" } });
+  await prisma.agency.create({ data: { id: 1, name: "Aurora Agency", cash: 0, reputation: 20, weeklyCosts: 35000, scoutingNetwork: 2 } });
+  await prisma.company.create({ data: { id: 1, agencyId: 1, name: "Nova Holdings", cash: 1_500_000, revenueBase: 120000, brandReputation: 12, industryType: "Tech" } });
   await prisma.gameState.create({ data: { id: 1 } });
   await prisma.presidency.create({ data: { id: 1 } });
-  await prisma.staff.createMany({ data: [{ role: "Scout", skill: 62, salary: 15000, agencyId: 1 }, { role: "Lawyer", skill: 58, salary: 18000, agencyId: 1 }, { role: "Analyst", skill: 65, salary: 17000, agencyId: 1 }] });
+  await prisma.staff.createMany({ data: [{ role: "Scout", skill: 52, salary: 12000, agencyId: 1 }, { role: "Lawyer", skill: 50, salary: 14000, agencyId: 1 }, { role: "Analyst", skill: 55, salary: 13000, agencyId: 1 }] });
 
   const stocks = clubRows.map((club) => ({ clubId: club.id, sharesOutstanding: 1_000_000 + Math.random() * 5_000_000, floatPercent: 0.45 + Math.random() * 0.45, pricePerShare: 2 + Math.random() * 20, volatility: 0.8 + Math.random() * 1.4 }));
   for (let i = 0; i < stocks.length; i += 300) await prisma.clubStock.createMany({ data: stocks.slice(i, i + 300) });
 
-  const topClub = clubRows[0];
-  await prisma.sponsorshipContract.create({ data: { companyId: 1, clubId: topClub.id, weeklyAmount: 120000, durationWeeks: 30, remainingWeeks: 30, performanceBonus: 25000, brandLift: 2.5 } });
   await prisma.eventLog.create({ data: { week: 1, category: "Seed", message: `Seed completed: ${leagueRows.length} leagues, ${clubRows.length} clubs, ${players.length} players` } });
 
   console.log("Seed done", { leagues: leagueRows.length, clubs: clubRows.length, players: players.length });

@@ -4,13 +4,47 @@ import { applySponsorshipToBudgets, agencyWeeklyBalance } from "@/lib/sim/econom
 import { calculateStockPrice } from "@/lib/sim/stockPricing";
 import { calculateTeamStrength, simulateMatch } from "@/lib/sim/matchSim";
 
+const nations = ["Averon", "Bristan", "Caldor", "Dramia", "Eldora", "Fesnia", "Gorath", "Helvia", "Istran", "Jorvik"];
+const syllables = ["al", "bar", "cor", "den", "el", "far", "gan", "hal", "ir", "jor", "kel", "lor", "mar", "nor", "or", "pra", "quil", "ran", "sor", "tor", "ul", "vor", "wen", "xer", "yor", "zen"];
+const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+const nameGen = (parts = 2) => Array.from({ length: parts }, () => pick(syllables)).join("").replace(/^./, (c) => c.toUpperCase());
+
+async function createYouthWindow(week: number, season: number, agencyRep: number) {
+  const weekInSeason = ((week - 1) % 52) + 1;
+  if (weekInSeason !== 1 && weekInSeason !== 26) return;
+  const exists = await prisma.youthProspect.count({ where: { season, windowWeek: weekInSeason } });
+  if (exists > 0) return;
+
+  const base = Math.max(35, Math.min(78, agencyRep + 30));
+  const data = Array.from({ length: 8 }).map(() => {
+    const elite = Math.random() > 0.82;
+    const overall = Math.max(35, Math.min(86, base + (Math.random() - 0.5) * 10));
+    const potential = Math.min(99, overall + (elite ? 18 + Math.random() * 10 : 6 + Math.random() * 12));
+    return {
+      name: `${nameGen(2)} ${nameGen(2)}`,
+      nationality: pick(nations),
+      age: 16 + Math.floor(Math.random() * 3),
+      position: pick(["GK", "DF", "MF", "FW"]),
+      overall,
+      potential,
+      morale: 55 + Math.random() * 30,
+      season,
+      windowWeek: weekInSeason
+    };
+  });
+
+  await prisma.youthProspect.createMany({ data });
+  await prisma.eventLog.create({ data: { week, category: "Youth", message: `Youth intake window opened (${data.length} prospects).` } });
+}
+
 export async function runOneWeekTick() {
   const state = await prisma.gameState.findUnique({ where: { id: 1 } });
   if (!state) return;
   const week = state.week + 1;
+  const season = Math.floor((week - 1) / 52) + 1;
 
   const agency = await prisma.agency.findUnique({ where: { id: 1 } });
-  const managedPlayers = await prisma.player.findMany({ where: { isManagedByAgent: true }, take: 60 });
+  const managedPlayers = await prisma.player.findMany({ where: { isManagedByAgent: true }, take: 60, orderBy: { overall: "desc" } });
   const programs = await prisma.supportProgram.findMany({ where: { active: true } });
 
   let supportCost = 0;
@@ -33,7 +67,12 @@ export async function runOneWeekTick() {
     await prisma.player.update({ where: { id: player.id }, data: updates as any });
   }
 
-  const clubs = await prisma.club.findMany({ include: { players: true, stock: true } });
+  const clubs = await prisma.club.findMany({
+    include: {
+      players: { take: 16, orderBy: { overall: "desc" } },
+      stock: true
+    }
+  });
   const byLeague = new Map<number, typeof clubs>();
   clubs.forEach((c) => {
     if (!byLeague.has(c.leagueId)) byLeague.set(c.leagueId, []);
@@ -50,8 +89,8 @@ export async function runOneWeekTick() {
       const m = simulateMatch(h, a);
       const homePts = m.result === "HOME" ? 3 : m.result === "DRAW" ? 1 : 0;
       const awayPts = m.result === "AWAY" ? 3 : m.result === "DRAW" ? 1 : 0;
-      await prisma.club.update({ where: { id: home.id }, data: { points: { increment: homePts }, last5Points: Math.min(15, home.last5Points + homePts), morale: Math.min(100, home.morale + (homePts - 1) * 1.2) } });
-      await prisma.club.update({ where: { id: away.id }, data: { points: { increment: awayPts }, last5Points: Math.min(15, away.last5Points + awayPts), morale: Math.min(100, away.morale + (awayPts - 1) * 1.2) } });
+      await prisma.club.update({ where: { id: home.id }, data: { points: { increment: homePts }, last5Points: Math.max(0, Math.min(15, Math.round(home.last5Points * 0.75 + homePts))), morale: Math.min(100, home.morale + (homePts - 1) * 1.2) } });
+      await prisma.club.update({ where: { id: away.id }, data: { points: { increment: awayPts }, last5Points: Math.max(0, Math.min(15, Math.round(away.last5Points * 0.75 + awayPts))), morale: Math.min(100, away.morale + (awayPts - 1) * 1.2) } });
     }
   }
 
@@ -81,9 +120,11 @@ export async function runOneWeekTick() {
   }
 
   if (agency) {
-    const balance = agencyWeeklyBalance(0, agency.weeklyCosts + supportCost, agency.debt);
+    const commissionIncome = managedPlayers.reduce((s, p) => s + p.marketValue * 0.00018, 0);
+    const balance = agencyWeeklyBalance(commissionIncome, agency.weeklyCosts + supportCost, agency.debt);
     const minus = agency.cash + balance < 0;
-    await prisma.agency.update({ where: { id: 1 }, data: { cash: { increment: balance }, ...(minus ? { debt: { increment: Math.abs(balance) }, reputation: { decrement: 1.5 } } : {}) } as any });
+    await prisma.agency.update({ where: { id: 1 }, data: { cash: { increment: balance }, ...(minus ? { debt: { increment: Math.abs(balance) * 0.4 }, reputation: { decrement: 1.5 } } : { reputation: { increment: 0.15 } }) } as any });
+    await prisma.eventLog.create({ data: { week, category: "Agency", message: `Weekly balance ${balance >= 0 ? "+" : ""}${balance.toFixed(0)} (commission ${commissionIncome.toFixed(0)})` } });
     if (minus) {
       await prisma.supportProgram.updateMany({ where: { active: true }, data: { active: false } });
       await prisma.eventLog.create({ data: { week, category: "Agency", message: "Program dibatalkan karena cash minus." } });
@@ -98,6 +139,8 @@ export async function runOneWeekTick() {
     await prisma.club.update({ where: { id: club.id }, data: { leaguePosition: pos } });
   }
 
+  await createYouthWindow(week, season, agency?.reputation ?? 10);
+
   await prisma.eventLog.create({ data: { week, category: "Tick", message: `Week ${week} completed` } });
-  await prisma.gameState.update({ where: { id: 1 }, data: { week } });
+  await prisma.gameState.update({ where: { id: 1 }, data: { week, season } });
 }
