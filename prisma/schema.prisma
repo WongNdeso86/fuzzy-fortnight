@@ -93,18 +93,19 @@ model Player {
 }
 
 model Company {
-  id              Int    @id @default(1)
-  agencyId        Int    @unique
-  agency          Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  id              Int                   @id @default(1)
+  agencyId        Int                   @unique
+  agency          Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   name            String
-  companyLevel    Int    @default(1)
+  companyLevel    Int                   @default(1)
   cash            Float
   revenueBase     Float
   brandReputation Float
   industryType    String
-  marketingLevel  Int    @default(1)
-  financeLevel    Int    @default(1)
-  opsLevel        Int    @default(1)
+  marketingLevel  Int                   @default(1)
+  financeLevel    Int                   @default(1)
+  opsLevel        Int                   @default(1)
+  sponsorships    SponsorshipContract[]
 }
 
 model SponsorshipContract {
