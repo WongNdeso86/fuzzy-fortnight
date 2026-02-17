@@ -61,6 +61,7 @@ model Club {
   leagueId          Int
   league            League                @relation(fields: [leagueId], references: [id], onDelete: Cascade)
   leaguePosition    Int                   @default(1)
+  played            Int                   @default(0)
   points            Int                   @default(0)
   last5Points       Int                   @default(0)
   sponsoredStrength Float                 @default(0)

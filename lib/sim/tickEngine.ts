@@ -89,8 +89,9 @@ export async function runOneWeekTick() {
       const m = simulateMatch(h, a);
       const homePts = m.result === "HOME" ? 3 : m.result === "DRAW" ? 1 : 0;
       const awayPts = m.result === "AWAY" ? 3 : m.result === "DRAW" ? 1 : 0;
-      await prisma.club.update({ where: { id: home.id }, data: { points: { increment: homePts }, last5Points: Math.max(0, Math.min(15, Math.round(home.last5Points * 0.75 + homePts))), morale: Math.min(100, home.morale + (homePts - 1) * 1.2) } });
-      await prisma.club.update({ where: { id: away.id }, data: { points: { increment: awayPts }, last5Points: Math.max(0, Math.min(15, Math.round(away.last5Points * 0.75 + awayPts))), morale: Math.min(100, away.morale + (awayPts - 1) * 1.2) } });
+      await prisma.club.update({ where: { id: home.id }, data: { played: { increment: 1 }, points: { increment: homePts }, last5Points: Math.max(0, Math.min(15, Math.round(home.last5Points * 0.75 + homePts))), morale: Math.min(100, home.morale + (homePts - 1) * 1.2) } });
+      await prisma.club.update({ where: { id: away.id }, data: { played: { increment: 1 }, points: { increment: awayPts }, last5Points: Math.max(0, Math.min(15, Math.round(away.last5Points * 0.75 + awayPts))), morale: Math.min(100, away.morale + (awayPts - 1) * 1.2) } });
+      await prisma.eventLog.create({ data: { week, category: "Match", message: `${home.name} ${m.homeGoals}-${m.awayGoals} ${away.name} (pts ${homePts}:${awayPts})` } });
     }
   }
 
@@ -109,11 +110,12 @@ export async function runOneWeekTick() {
     if (!c.stock) continue;
     const price = calculateStockPrice(c.stock.pricePerShare, {
       recentForm: c.last5Points / 15,
-      positionDelta: (20 - c.leaguePosition) / 20,
-      financialHealth: Math.max(0, Math.min(1, c.cash / (c.wageBudget + 1))),
+      positionScore: (20 - c.leaguePosition) / 20,
+      financialHealth: Math.max(0, Math.min(1, c.cash / (c.wageBudget + c.transferBudget + 1))),
       squadQuality: c.players.slice(0, 11).reduce((s, p) => s + p.overall, 0) / 1100,
       sponsorshipStrength: c.sponsoredStrength / 100,
-      volatility: c.stock.volatility
+      volatility: c.stock.volatility,
+      wagePressure: Math.max(0, Math.min(1, c.wageBudget / (c.cash + 1)))
     });
     await prisma.clubStock.update({ where: { id: c.stock.id }, data: { pricePerShare: price.nextPrice } });
     await prisma.stockPricePoint.create({ data: { clubStockId: c.stock.id, week, price: price.nextPrice, reasonLog: price.reason } });
