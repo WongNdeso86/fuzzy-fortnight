@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model GameState {
+  id                  Int      @id @default(1)
+  week                Int      @default(1)
+  season              Int      @default(1)
+  autoAdvance         Boolean  @default(false)
+  autoAdvanceSpeed    Int      @default(2)
+  editorEnabled       Boolean  @default(false)
+  editorThresholdMode String   @default("CONTROL_51")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Agency {
+  id              Int      @id @default(1)
+  name            String
+  cash            Float
+  reputation      Float
+  weeklyCosts     Float
+  scoutingNetwork Int
+  debt            Float    @default(0)
+  company         Company?
+}
+
+model Staff {
+  id       Int    @id @default(autoincrement())
+  role     String
+  skill    Float
+  salary   Float
+  agencyId Int
+}
+
+model League {
+  id         Int    @id @default(autoincrement())
+  name       String @unique
+  region     String
+  tier       Int
+  reputation Float
+  clubs      Club[]
+}
+
+model Club {
+  id                Int                   @id @default(autoincrement())
+  name              String                @unique
+  reputation        Float
+  cash              Float
+  wageBudget        Float
+  transferBudget    Float
+  facilitiesLevel   Float
+  coachQuality      Float
+  morale            Float                 @default(50)
+  youthSpend        Float                 @default(20000)
+  leagueId          Int
+  league            League                @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  leaguePosition    Int                   @default(1)
+  played            Int                   @default(0)
+  points            Int                   @default(0)
+  last5Points       Int                   @default(0)
+  sponsoredStrength Float                 @default(0)
+  stock             ClubStock?
+  players           Player[]
+  sponsorships      SponsorshipContract[]
+}
+
+model Player {
+  id               Int      @id @default(autoincrement())
+  name             String
+  nationality      String
+  age              Int
+  position         String
+  overall          Float
+  potential        Float
+  form             Float
+  morale           Float
+  injuryRisk       Float
+  injuryStatus     Int      @default(0)
+  fatigue          Float    @default(0)
+  professionalism  Float
+  marketValue      Float
+  growthRate       Float    @default(0.01)
+  consistency      Float    @default(50)
+  negotiationPower Float    @default(0)
+  clubId           Int
+  club             Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  isManagedByAgent Boolean  @default(false)
+}
+
+model YouthProspect {
+  id          Int     @id @default(autoincrement())
+  name        String
+  nationality String
+  age         Int
+  position    String
+  overall     Float
+  potential   Float
+  morale      Float
+  season      Int
+  windowWeek  Int
+  isClaimed   Boolean @default(false)
+}
+
+model Company {
+  id              Int                   @id @default(1)
+  agencyId        Int                   @unique
+  agency          Agency                @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  name            String
+  companyLevel    Int                   @default(1)
+  cash            Float
+  revenueBase     Float
+  brandReputation Float
+  industryType    String
+  marketingLevel  Int                   @default(1)
+  financeLevel    Int                   @default(1)
+  opsLevel        Int                   @default(1)
+  sponsorships    SponsorshipContract[]
+}
+
+model SponsorshipContract {
+  id               Int     @id @default(autoincrement())
+  companyId        Int
+  clubId           Int
+  company          Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  club             Club    @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  weeklyAmount     Float
+  durationWeeks    Int
+  remainingWeeks   Int
+  performanceBonus Float
+  brandLift        Float
+}
+
+model ClubStock {
+  id                Int               @id @default(autoincrement())
+  clubId            Int               @unique
+  club              Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  sharesOutstanding Float
+  floatPercent      Float
+  pricePerShare     Float
+  volatility        Float
+  points            StockPricePoint[]
+}
+
+model StockPricePoint {
+  id          Int       @id @default(autoincrement())
+  clubStockId Int
+  clubStock   ClubStock @relation(fields: [clubStockId], references: [id], onDelete: Cascade)
+  week        Int
+  price       Float
+  reasonLog   String
+  createdAt   DateTime  @default(now())
+}
+
+model PortfolioHolding {
+  id          Int   @id @default(autoincrement())
+  clubId      Int   @unique
+  shares      Float
+  averageCost Float
+}
+
+model StockTransaction {
+  id        Int      @id @default(autoincrement())
+  clubId    Int
+  action    String
+  shares    Float
+  price     Float
+  total     Float
+  week      Int
+  createdAt DateTime @default(now())
+}
+
+model Presidency {
+  id               Int     @id @default(1)
+  clubId           Int?
+  ownershipPercent Float   @default(0)
+  isPresident      Boolean @default(false)
+  wageBudgetRatio  Float   @default(0.55)
+  facilitiesSpend  Float   @default(50000)
+  youthSpend       Float   @default(30000)
+}
+
+model SupportProgram {
+  id         Int     @id @default(autoincrement())
+  playerId   Int     @unique
+  type       String
+  weeklyCost Float
+  intensity  Float
+  active     Boolean @default(true)
+}
+
+model EventLog {
+  id        Int      @id @default(autoincrement())
+  week      Int
+  category  String
+  message   String
+  createdAt DateTime @default(now())
+}
