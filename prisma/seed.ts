@@ -1,4 +1,4 @@
-import { PrismaClient, Position } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -60,7 +60,7 @@ async function main() {
       name: `${nameGen(2)} ${nameGen(2)}`,
       nationality: pick(nations),
       age: 16 + Math.floor(Math.random() * 20),
-      position: pick([Position.GK, Position.DF, Position.MF, Position.FW]),
+      position: pick(["GK", "DF", "MF", "FW"]),
       overall: ov,
       potential: Math.min(99, ov + Math.random() * 20),
       form: 40 + Math.random() * 50,

@@ -7,13 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Position {
-  GK
-  DF
-  MF
-  FW
-}
-
 model GameState {
   id                  Int      @id @default(1)
   week                Int      @default(1)
@@ -55,24 +48,25 @@ model League {
 }
 
 model Club {
-  id               Int      @id @default(autoincrement())
-  name             String   @unique
-  reputation       Float
-  cash             Float
-  wageBudget       Float
-  transferBudget   Float
-  facilitiesLevel  Float
-  coachQuality     Float
-  morale           Float    @default(50)
-  youthSpend       Float    @default(20000)
-  leagueId         Int
-  leaguePosition   Int      @default(1)
-  points           Int      @default(0)
-  last5Points      Int      @default(0)
-  sponsoredStrength Float   @default(0)
-  stock            ClubStock?
-  players          Player[]
-  sponsorships     SponsorshipContract[]
+  id                Int                   @id @default(autoincrement())
+  name              String                @unique
+  reputation        Float
+  cash              Float
+  wageBudget        Float
+  transferBudget    Float
+  facilitiesLevel   Float
+  coachQuality      Float
+  morale            Float                 @default(50)
+  youthSpend        Float                 @default(20000)
+  leagueId          Int
+  league            League                @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  leaguePosition    Int                   @default(1)
+  points            Int                   @default(0)
+  last5Points       Int                   @default(0)
+  sponsoredStrength Float                 @default(0)
+  stock             ClubStock?
+  players           Player[]
+  sponsorships      SponsorshipContract[]
 }
 
 model Player {
@@ -80,7 +74,7 @@ model Player {
   name             String
   nationality      String
   age              Int
-  position         Position
+  position         String
   overall          Float
   potential        Float
   form             Float
@@ -94,12 +88,14 @@ model Player {
   consistency      Float    @default(50)
   negotiationPower Float    @default(0)
   clubId           Int
+  club             Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
   isManagedByAgent Boolean  @default(false)
 }
 
 model Company {
   id              Int    @id @default(1)
   agencyId        Int    @unique
+  agency          Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   name            String
   companyLevel    Int    @default(1)
   cash            Float
@@ -112,9 +108,11 @@ model Company {
 }
 
 model SponsorshipContract {
-  id               Int      @id @default(autoincrement())
+  id               Int     @id @default(autoincrement())
   companyId        Int
   clubId           Int
+  company          Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  club             Club    @relation(fields: [clubId], references: [id], onDelete: Cascade)
   weeklyAmount     Float
   durationWeeks    Int
   remainingWeeks   Int
@@ -123,8 +121,9 @@ model SponsorshipContract {
 }
 
 model ClubStock {
-  id                Int      @id @default(autoincrement())
-  clubId            Int      @unique
+  id                Int               @id @default(autoincrement())
+  clubId            Int               @unique
+  club              Club              @relation(fields: [clubId], references: [id], onDelete: Cascade)
   sharesOutstanding Float
   floatPercent      Float
   pricePerShare     Float
@@ -133,19 +132,20 @@ model ClubStock {
 }
 
 model StockPricePoint {
-  id          Int      @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   clubStockId Int
+  clubStock   ClubStock @relation(fields: [clubStockId], references: [id], onDelete: Cascade)
   week        Int
   price       Float
   reasonLog   String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 }
 
 model PortfolioHolding {
-  id            Int    @id @default(autoincrement())
-  clubId         Int   @unique
-  shares         Float
-  averageCost    Float
+  id          Int   @id @default(autoincrement())
+  clubId       Int  @unique
+  shares       Float
+  averageCost  Float
 }
 
 model StockTransaction {
@@ -160,22 +160,22 @@ model StockTransaction {
 }
 
 model Presidency {
-  id              Int    @id @default(1)
+  id               Int     @id @default(1)
   clubId           Int?
-  ownershipPercent Float  @default(0)
+  ownershipPercent Float   @default(0)
   isPresident      Boolean @default(false)
-  wageBudgetRatio  Float  @default(0.55)
-  facilitiesSpend  Float  @default(50000)
-  youthSpend       Float  @default(30000)
+  wageBudgetRatio  Float   @default(0.55)
+  facilitiesSpend  Float   @default(50000)
+  youthSpend       Float   @default(30000)
 }
 
 model SupportProgram {
-  id          Int    @id @default(autoincrement())
-  playerId     Int   @unique
-  type        String
-  weeklyCost  Float
-  intensity   Float
-  active      Boolean @default(true)
+  id         Int     @id @default(autoincrement())
+  playerId   Int     @unique
+  type       String
+  weeklyCost Float
+  intensity  Float
+  active     Boolean @default(true)
 }
 
 model EventLog {
