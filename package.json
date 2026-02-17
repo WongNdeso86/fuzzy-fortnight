@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "tsx prisma/seed.ts",
-    "bootstrap": "npm install && npx prisma migrate dev --name init && npx prisma db seed"
+    "bootstrap": "npm install && npx prisma migrate dev --name init && npx prisma db seed",
+    "doctor": "node scripts/doctor.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
