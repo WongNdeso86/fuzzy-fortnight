@@ -37,7 +37,7 @@ async function main() {
   const clubs = Array.from({ length: 720 }).map((_, i) => {
     const league = leagueRows[i % leagueRows.length];
     return {
-      name: `${nameGen(2)} ${nameGen(1)} FC`,
+      name: `${nameGen(2)} ${nameGen(1)} FC ${String(i + 1).padStart(4, "0")}`,
       reputation: 20 + Math.random() * 70,
       cash: 1_000_000 + Math.random() * 20_000_000,
       wageBudget: 100_000 + Math.random() * 1_500_000,
